@@ -5,6 +5,8 @@ namespace ListingMatcher
 {
     public static class DictionaryExtensions
     {
+        private static readonly object _locker = new object();
+
         /// <summary>
         /// Wraps the logic of creating a new dictionary entry for the key before assigning value or adding adding
         /// the value right away, if the associated key already exists.
@@ -22,10 +24,13 @@ namespace ListingMatcher
 
             List<Listing> listings;
 
-            if (dictionary.TryGetValue(productName, out listings))
-                listings.Add(listing);
-            else
-                dictionary.Add(productName, new List<Listing> { listing });
+            lock (_locker)
+            {
+                if (dictionary.TryGetValue(productName, out listings))
+                    listings.Add(listing);
+                else
+                    dictionary.Add(productName, new List<Listing> {listing});
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace ListingMatcher
 {
@@ -21,7 +22,7 @@ namespace ListingMatcher
                 if(product == null)
                     continue;
 
-                FindAllListingsForProduct(product, listings, allListingsOfProduct);
+                FindAllListingsForProductAsync(product, listings, allListingsOfProduct);
             }
 
             return FormatResults(allListingsOfProduct);
@@ -39,6 +40,21 @@ namespace ListingMatcher
             }
         }
 
+        private static void FindAllListingsForProductAsync(Product product, List<Listing> listings, Dictionary<string, List<Listing>> allListingsOfProduct)
+        {
+            Parallel.ForEach(listings, listing =>
+                                           {
+                                               if (
+                                                   !(listing == null || listing.Picked ||
+                                                     !ListingMatchesProduct(product.Tokens, listing.Tokens)))
+                                               {
+                                                   listing.Picked = true;
+                                                   allListingsOfProduct.AddOrUpdate(product.ProductName, listing);
+                                               }
+                                           }
+                );
+        }
+
         private static bool ListingMatchesProduct(string[] productTokens, string[] listingTokens)
         {
             if(productTokens == null || listingTokens == null)
@@ -53,13 +69,14 @@ namespace ListingMatcher
             // due to enumerator object generation at runtime instead of simple array traversal
             for (int productTokenIndex = 0; productTokenIndex < productTokens.Length; productTokenIndex++)
             {
-                if(productTokens[productTokenIndex] == null)
+                string productToken = productTokens[productTokenIndex];
+                if (string.IsNullOrWhiteSpace(productToken))
                     continue;
 
                 if (foundProductTokenCount >= productTokens.Length)
                     break;
 
-                foundProductTokenCount += MatchCountForProductToken(productTokens[productTokenIndex], listingTokens);
+                foundProductTokenCount += MatchCountForProductToken(productToken, listingTokens);
             }
 
             return foundProductTokenCount == productTokens.Length;
